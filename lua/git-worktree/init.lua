@@ -292,6 +292,31 @@ local function has_branch(branch, cb)
     end):start()
 end
 
+local function copy_template_files(worktree_path)
+    local template_path = git_worktree_root .. "/" .. M._config.copy_template
+    if vim.fn.filereadable(template_path) ~= 1 then
+        return
+    end
+
+    local lines = vim.fn.readfile(template_path)
+    for _, line in ipairs(lines) do
+        line = vim.trim(line)
+        if line ~= "" and not vim.startswith(line, "#") then
+            local src = git_worktree_root .. "/" .. line
+            local dst = worktree_path .. "/" .. line
+            if vim.fn.filereadable(src) == 1 then
+                local dst_dir = vim.fn.fnamemodify(dst, ":h")
+                vim.fn.mkdir(dst_dir, "p")
+                local content = vim.fn.readfile(src, "b")
+                vim.fn.writefile(content, dst, "b")
+                status:status("Copied to new worktree: " .. line)
+            else
+                status:status("Template entry not found, skipping: " .. line)
+            end
+        end
+    end
+end
+
 local function create_worktree(path, branch, upstream, found_branch)
     local create = create_worktree_job(path, branch, found_branch)
 
@@ -368,6 +393,7 @@ local function create_worktree(path, branch, upstream, found_branch)
             end
 
             vim.schedule(function()
+                copy_template_files(worktree_path)
                 emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
                 M.switch_worktree(path)
             end)
@@ -375,6 +401,7 @@ local function create_worktree(path, branch, upstream, found_branch)
     else
         create:after(function()
             vim.schedule(function()
+                copy_template_files(worktree_path)
                 emit_on_change(Enum.Operations.Create, {path = path, branch = branch, upstream = upstream})
                 M.switch_worktree(path)
             end)
@@ -543,6 +570,7 @@ M.setup = function(config)
         confirm_telescope_deletions = false,
         -- should this default to true or false?
         autopush = false,
+        copy_template = ".git-worktree-copy",
     }, config)
 end
 
