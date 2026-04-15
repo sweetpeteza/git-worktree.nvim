@@ -293,7 +293,8 @@ local function has_branch(branch, cb)
 end
 
 local function copy_template_files(worktree_path)
-    local template_path = git_worktree_root .. "/" .. M._config.copy_template
+    local source_root = current_worktree_path
+    local template_path = source_root .. "/" .. M._config.copy_template
     if vim.fn.filereadable(template_path) ~= 1 then
         return
     end
@@ -302,7 +303,7 @@ local function copy_template_files(worktree_path)
     for _, line in ipairs(lines) do
         line = vim.trim(line)
         if line ~= "" and not vim.startswith(line, "#") then
-            local src = git_worktree_root .. "/" .. line
+            local src = source_root .. "/" .. line
             local dst = worktree_path .. "/" .. line
             if vim.fn.filereadable(src) == 1 then
                 local dst_dir = vim.fn.fnamemodify(dst, ":h")
